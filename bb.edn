@@ -1,4 +1,4 @@
-{:paths ["src" "resources" "spec"]
+{:paths ["src" "resources" "spec" "feature-steps"]
 
  ;; Native babashka runners via isaac-foundation-test-support (isaac-x5ru / isaac-dt9h).
  ;; Keep the test-support :git/sha in sync with the foundation commit that
@@ -63,9 +63,18 @@
             :task (binding [tests/*jvm-spec-cmd* ["clojure" "-M:spec"]]
                     (apply tests/run-jvm-spec! *command-line-args*))}
 
-  ci {:doc  "Native bb specs (no features suite yet)"
+  features {:doc  "Features need JVM (server/agent steps). Delegates to jvm-features."
+            :task (apply shell "bb" "jvm-features" *command-line-args*)}
+
+  jvm-features {:doc  "Run gherclj via clojure -M:features (JVM fallback)"
+                :requires ([bb.test-tasks :as tests])
+                :task (binding [tests/*jvm-features-cmd* ["clojure" "-M:features"]]
+                        (apply tests/run-jvm-features! *command-line-args*))}
+
+  ci {:doc  "Native bb specs + JVM features (@wip excluded by alias)"
       :task (do (run 'config-bypass-lint)
-                (shell "bb" "spec"))}
+                (shell "bb" "spec")
+                (shell "bb" "jvm-features"))}
 
   lint {:doc      "Run clj-kondo lint (default: src spec; pass file/dir to narrow)"
         :requires ([babashka.pods :as pods])

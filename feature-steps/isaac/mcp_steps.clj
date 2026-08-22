@@ -2,7 +2,7 @@
   "One new helper: reuse the established 'the Isaac system is started' phrase
    (cron/hail) to boot MCP reconfigurable from loaded config."
   (:require
-    [gherclj.core :as g :refer [defwhen after-scenario helper!]]
+    [gherclj.core :as g :refer [defwhen after-all after-scenario helper!]]
     [isaac.config.loader :as loader]
     [isaac.fs :as fs]
     [isaac.nexus :as nexus]))
@@ -21,5 +21,7 @@
     (catch Exception _)))
 
 (after-scenario isaac-system-stopped)
+
+(after-all shutdown-agents)
 
 (defwhen "the Isaac system is started" isaac.mcp-steps/isaac-system-started)

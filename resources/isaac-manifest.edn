@@ -31,5 +31,7 @@
        :value-spec {:type :string}},
       :cwd
       {:type :string,
-       :description "Working directory for the server process"}}}}}}
-}
+       :description "Working directory for the server process"},
+      :timeout-ms
+      {:type :int,
+       :description "Per-call timeout in milliseconds (default 30000)"}}}}}}}

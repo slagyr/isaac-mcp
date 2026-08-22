@@ -56,9 +56,8 @@
                                                                         :deps/root "modules/marigold.bridge"}
                            marigold.longwave/marigold.longwave          {:git/url "https://github.com/slagyr/isaac-foundation.git"
                                                                         :git/sha "a8344457b8b187738092072e92e0776a0128c721"
-                                                                        :deps/root "modules/marigold.longwave"}
-                           isaac.comm.telly/isaac.comm.telly            {:local/root "../isaac-agent/modules/isaac.comm.telly"}}
-             :main-opts   ["-m" "gherclj.main"
+                                                                        :deps/root "modules/marigold.longwave"}}
+             :main-opts   ["-m" "isaac.mcp.feature-runner"
                            "-f" "features"
                            "-s" "isaac.**-steps"
                            "-t" "~slow"

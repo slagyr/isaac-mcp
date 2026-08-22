@@ -1,4 +1,3 @@
-@wip
 Feature: Config Validate (MCP servers)
   `isaac config validate` checks MCP entity files under config/mcp/
   against the :mcp schema. :command is required. Crew allow/deny is

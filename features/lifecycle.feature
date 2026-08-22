@@ -1,4 +1,3 @@
-@wip
 Feature: MCP stdio lifecycle
   Configured MCP servers start over stdio. Discovered tools register
   as ns__name (server id + MCP tool name) and run through the existing

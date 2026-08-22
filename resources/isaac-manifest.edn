@@ -1,0 +1,35 @@
+{:id :isaac.mcp,
+ :version "0.1.0",
+ :builtin? true,
+ :factory isaac.mcp.module/create-module,
+ :isaac.config/schema
+ {:mcp
+  {:entity-dir "mcp",
+   :schema
+   {:name "mcp table",
+    :type :map,
+    :description
+    "MCP server configurations (map of server id -> server config)",
+    :key-spec {:type :string},
+    :value-spec
+    {:name :mcp-server,
+     :type :map,
+     :description "MCP server configuration",
+     :schema
+     {:command
+      {:type :string,
+       :description "Command used to launch the MCP server",
+       :validations [:present?]},
+      :args
+      {:type :seq,
+       :description "Arguments passed to the command",
+       :spec {:type :string}},
+      :env
+      {:type :map,
+       :description "Environment variables for the server process",
+       :key-spec {:type :string},
+       :value-spec {:type :string}},
+      :cwd
+      {:type :string,
+       :description "Working directory for the server process"}}}}}}
+}

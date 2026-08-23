@@ -1,4 +1,3 @@
-@wip
 Feature: MCP tools in a turn
   A crew `:allow` of `:lens/*` (or `:lens/catalog`) offers the prefixed
   wire names on the prompt and a turn can invoke them. Unavailable

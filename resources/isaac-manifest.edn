@@ -1,4 +1,4 @@
-{:id :isaac.mcp,
+{:id :isaac.tool.mcp,
  :version "0.1.0",
  :builtin? true,
  :factory isaac.mcp.module/create-module,

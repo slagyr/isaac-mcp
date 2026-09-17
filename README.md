@@ -3,8 +3,9 @@
 Module endowing Isaac with MCP tool calling powers.
 
 Depends on [isaac-foundation](https://github.com/slagyr/isaac-foundation) and
-[isaac-agent](https://github.com/slagyr/isaac-agent). Contributes config-declared
-MCP servers and (planned) tool discovery into the agent tool loop.
+[isaac-agent](https://github.com/slagyr/isaac-agent). Starts config-declared MCP
+servers over stdio, discovers their tools, and registers them into the agent
+tool loop under prefixed names.
 
 [![MCP](https://github.com/slagyr/isaac-mcp/actions/workflows/ci-tests.yml/badge.svg)](https://github.com/slagyr/isaac-mcp/actions/workflows/ci-tests.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -14,9 +15,19 @@ MCP servers and (planned) tool discovery into the agent tool loop.
 
 ## What's here
 
-- Module skeleton (`isaac.mcp.module/create-module`).
-- Config schema stub for MCP servers in `config/mcp/` (`:command` required; optional `:args`, `:env`, `:cwd`).
-- Tool discovery and registration into the agent tool loop — planned.
+- Module `:isaac.tool.mcp` (`isaac.mcp.module/create-module`).
+- Config schema for the `:mcp` table — entity files under `config/mcp/`, one per
+  server. `:command` is required; `:args`, `:env`, `:cwd` and `:timeout-ms`
+  (per-call, default 30000ms) are optional. Transport is stdio only.
+- Tool discovery and registration into the agent tool loop. On load,
+  `isaac.mcp.runtime` connects each configured server, lists its tools, and
+  registers every one with the agent's tool registry — handler, description and
+  the MCP `inputSchema` as parameters.
+- Registered names are `<server-id>__<tool-name>`, so a server declared as
+  `lens` offers `lens__catalog`. Crew allow-lists therefore name the server,
+  e.g. `:lens/*` or `:lens/catalog` — there is no `mcp/` prefix.
+- Servers reconnect on config change (`McpRuntime` is `Reconfigurable`), and a
+  dead command logs `:mcp/connect-failed` without failing Isaac boot.
 
 ## Development
 

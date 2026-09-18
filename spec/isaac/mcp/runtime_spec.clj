@@ -1,6 +1,7 @@
 (ns isaac.mcp.runtime-spec
   (:require
     [isaac.logger :as log]
+    [isaac.mcp.client :as client]
     [isaac.mcp.runtime :as sut]
     [isaac.nexus :as nexus]
     [isaac.reconfigurable :as reconfigurable]
@@ -32,6 +33,60 @@
     (sut/start! {:lens {:command "/no/such/mcp-server"}})
     (should (some #(= :mcp/connect-failed (:event %)) @log/captured-logs)))
 
+  (context "ensure-server! (tool provider)"
+
+    (it "connects a configured server on first use and returns its wire names"
+      (helper/with-config {:mcp {:lens lens-server}}
+        (should= ["lens__catalog" "lens__read"] (sort (sut/ensure-server! "lens")))
+        (should (registry/lookup "lens__catalog"))
+        (should (some #(= :mcp/connected (:event %)) @log/captured-logs))))
+
+    (it "reuses the live client on later calls"
+      (helper/with-config {:mcp {:lens lens-server}}
+        (sut/ensure-server! "lens")
+        (should= ["lens__catalog" "lens__read"] (sort (sut/ensure-server! "lens" {})))
+        (should= 1 (count (filter #(= :mcp/connected (:event %)) @log/captured-logs)))))
+
+    (it "finds a server keyed by string in the committed table"
+      (helper/with-config {:mcp {"lens" lens-server}}
+        (should= ["lens__catalog" "lens__read"] (sort (sut/ensure-server! "lens")))))
+
+    (it "declines an id that is not configured"
+      (helper/with-config {:mcp {:lens lens-server}}
+        (should-be-nil (sut/ensure-server! "skybeam"))
+        (should-be-nil (registry/lookup "skybeam__catalog"))))
+
+    (it "declines a dead command and holds the retry"
+      (helper/with-config {:mcp {:lens {:command "/no/such/mcp-server"}}}
+        (should-be-nil (sut/ensure-server! "lens"))
+        (should-be-nil (sut/ensure-server! "lens"))
+        (should= 1 (count (filter #(= :mcp/connect-failed (:event %)) @log/captured-logs)))))
+
+    (it "a registration that outlived its server reconnects on the next call"
+      (helper/with-config {:mcp {:lens lens-server}}
+        (sut/start! {:lens lens-server})
+        (client/stop! (get-in @@#'sut/state* [:clients :lens :client]))
+        (should (registry/lookup "lens__catalog"))
+        (let [result (registry/execute "lens__catalog" {"query" "marigold"})]
+          (should-not (:isError result))
+          (should-contain "marigold" (:result result)))
+        (should= 2 (count (filter #(= :mcp/connected (:event %)) @log/captured-logs)))))
+
+    (it "a call with no server configured reports not connected"
+      (helper/with-config {:mcp {}}
+        (sut/start! {:lens lens-server})
+        (client/stop! (get-in @@#'sut/state* [:clients :lens :client]))
+        (let [result (registry/execute "lens__catalog" {"query" "marigold"})]
+          (should (:isError result))
+          (should-contain "not connected" (:error result)))))
+
+    (it "stop! clears the retry hold"
+      (helper/with-config {:mcp {:lens {:command "/no/such/mcp-server"}}}
+        (sut/ensure-server! "lens")
+        (sut/stop!)
+        (sut/ensure-server! "lens")
+        (should= 2 (count (filter #(= :mcp/connect-failed (:event %)) @log/captured-logs))))))
+
   (context "live lens"
 
     (it "registers prefixed tools and logs :mcp/connected"
@@ -46,6 +101,15 @@
     (it "executes catalog through the tool registry"
       (sut/start! {:lens lens-server})
       (let [result (registry/execute "lens__catalog" {"query" "marigold"})]
+        (should-not (:isError result))
+        (should-contain "marigold" (:result result))))
+
+    (it "strips injected keys and callables before calling the server"
+      (sut/start! {:lens lens-server})
+      (let [result (registry/execute "lens__catalog" {"query"      "marigold"
+                                                       "session_key" "s1"
+                                                       "state_dir"   "/tmp"
+                                                       :progress!    (fn [_] nil)})]
         (should-not (:isError result))
         (should-contain "marigold" (:result result))))
 

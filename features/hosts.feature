@@ -1,4 +1,3 @@
-@wip
 Feature: MCP tools reach every host
   Config-declared MCP servers are offered and invoked through the same
   registry seam in every host. Nothing in `prompt` or `acp` knows about

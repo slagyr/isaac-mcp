@@ -13,6 +13,10 @@
   (it "returns a module"
     (should (satisfies? isaac.module.protocol/Module (sut/create-module))))
 
+  (it "contributes ensure-server! to the :isaac.agent/tool-providers berth"
+    (should= 'isaac.mcp.runtime/ensure-server!
+             (get-in manifest [:isaac.agent/tool-providers :mcp :ensure!])))
+
   (context "config schema"
 
     (it "requires command on each server"

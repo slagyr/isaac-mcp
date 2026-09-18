@@ -7,10 +7,19 @@
     [isaac.reconfigurable :as reconfigurable]
     [isaac.spec-helper :as helper]
     [isaac.tool.registry :as registry]
-    [speclj.core :refer [after around context describe it should should-be-nil should-contain should-not should=]]))
+    [speclj.core :refer [after around context describe it should should-be-nil should-contain should-not should-not-contain should=]]))
 
 (def lens-server
   {:command "bb" :args ["test-resources/marigold/lens_mcp.bb"]})
+
+(def lens-list-changed
+  {:command "bb" :args ["test-resources/marigold/lens_mcp.bb" "--grow" "--list-changed"]})
+
+(def lens-grow
+  {:command "bb" :args ["test-resources/marigold/lens_mcp.bb" "--grow"]})
+
+(defn- events [event]
+  (filter #(= event (:event %)) @log/captured-logs))
 
 (describe "isaac.mcp.runtime"
 
@@ -86,6 +95,35 @@
         (sut/stop!)
         (sut/ensure-server! "lens")
         (should= 2 (count (filter #(= :mcp/connect-failed (:event %)) @log/captured-logs))))))
+
+  (context "tools/list_changed (isaac-0szr)"
+
+    (it "re-catalogs a listChanged server after grow, before the next turn"
+      (helper/with-config {:mcp {:lens lens-list-changed}}
+        (sut/ensure-server! "lens")
+        (should-be-nil (registry/lookup "lens__extra"))
+        (should-not (:isError (registry/execute "lens__grow" {})))
+        (should (registry/lookup "lens__extra"))
+        (should= 1 (count (events :mcp/recatalogued)))
+        (should-contain "lens__extra" (sut/ensure-server! "lens"))
+        (should= 1 (count (events :mcp/recatalogued)))))
+
+    (it "keeps the catalog of a server that did not declare listChanged"
+      (helper/with-config {:mcp {:lens lens-grow}}
+        (sut/ensure-server! "lens")
+        (should-not (:isError (registry/execute "lens__grow" {})))
+        (should-be-nil (registry/lookup "lens__extra"))
+        (sut/ensure-server! "lens")
+        (should-be-nil (registry/lookup "lens__extra"))
+        (should= [] (events :mcp/recatalogued))))
+
+    (it "a stop! and reconnect starts clean"
+      (helper/with-config {:mcp {:lens lens-list-changed}}
+        (sut/ensure-server! "lens")
+        (registry/execute "lens__grow" {})
+        (sut/stop!)
+        (should-be-nil (registry/lookup "lens__extra"))
+        (should-not-contain "lens__extra" (sut/ensure-server! "lens")))))
 
   (context "live lens"
 

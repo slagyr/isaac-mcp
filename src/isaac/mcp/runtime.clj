@@ -39,7 +39,7 @@
   (doseq [name names]
     (registry/unregister! name)))
 
-(declare ensure-server!)
+(declare ensure-server! recatalog!)
 
 (defn- live-client [server-id]
   (let [c (get-in @state* [:clients server-id :client])]
@@ -55,7 +55,13 @@
   (if-let [c (or (live-client server-id)
                  (do (ensure-server! (name server-id))
                      (live-client server-id)))]
-    (client/call-tool c mcp-name arguments timeout)
+    (let [result (client/call-tool c mcp-name arguments timeout)]
+      ;; A list_changed notification is only ever seen while a reply is
+      ;; being read, so this is the earliest the catalog can move; doing it
+      ;; here makes the new tools part of the next turn's prompt.
+      (when (client/dirty? c)
+        (recatalog! server-id))
+      result)
     {:isError true :error (str "MCP server " (name server-id) " is not connected")}))
 
 (defn- register-tool! [server-id client-state mcp-tool]
@@ -89,8 +95,32 @@
                                  (:ok listed))]
             (log/info :mcp/connected :server server-id)
             {:id     server-id
+             :server server
              :client result
              :tools  tool-names}))))))
+
+(defn- recatalog!
+  "Ask a dirty server for its catalog again (isaac-0szr): register what is
+   new or changed, unregister what vanished, clear the flag. On a failed
+   tools/list the old catalog stands and the flag clears so the next
+   notification can try again."
+  [server-id]
+  (let [{:keys [client server tools]} (get-in @state* [:clients server-id])
+        listed (client/list-tools client (timeout-ms server))]
+    (client/clear-dirty! client)
+    (if (:error listed)
+      (do (log/error :mcp/recatalog-failed :server server-id :error (:error listed))
+          tools)
+      (let [new-names (mapv #(register-tool! server-id (assoc server :client client) %)
+                            (:ok listed))
+            vanished  (remove (set new-names) tools)]
+        (unregister-tools! vanished)
+        (swap! state* (fn [s]
+                        (-> s
+                            (assoc-in [:clients server-id :tools] new-names)
+                            (update :tools #(into (vec (remove (set tools) %)) new-names)))))
+        (log/info :mcp/recatalogued :server server-id :count (count new-names))
+        new-names))))
 
 (defn stop!
   []
@@ -126,8 +156,10 @@
   ([ns-str] (ensure-server! ns-str nil))
   ([ns-str _module-index]
    (let [id (keyword ns-str)]
-     (or (when (live-client id)
-           (get-in @state* [:clients id :tools]))
+     (or (when-let [c (live-client id)]
+           (if (client/dirty? c)
+             (recatalog! id)
+             (get-in @state* [:clients id :tools])))
          (let [servers (:mcp (or (loader/snapshot "mcp ensure-server") {}))
                server  (server-config servers ns-str)
                now-ms  (System/currentTimeMillis)]

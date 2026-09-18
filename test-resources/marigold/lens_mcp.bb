@@ -6,17 +6,30 @@
   (println (json/generate-string message))
   (flush))
 
+(def list-changed?
+  "With --list-changed the server advertises tools.listChanged (isaac-0szr)."
+  (boolean (some #{"--list-changed"} *command-line-args*)))
+
+(def grow?
+  "With --grow the catalog carries a `grow` tool that adds `extra` and then
+   emits notifications/tools/list_changed — with or without the capability."
+  (boolean (some #{"--grow"} *command-line-args*)))
+
+(def query-schema
+  {:type       "object"
+   :properties {:query {:type "string"}}
+   :required   ["query"]})
+
 (def tools
-  [{:name        "catalog"
-    :description "Marigold catalog lookup"
-    :inputSchema {:type       "object"
-                  :properties {:query {:type "string"}}
-                  :required   ["query"]}}
-   {:name        "read"
-    :description "Read a marigold page"
-    :inputSchema {:type       "object"
-                  :properties {:query {:type "string"}}
-                  :required   ["query"]}}])
+  (atom (cond-> [{:name "catalog" :description "Marigold catalog lookup" :inputSchema query-schema}
+                 {:name "read" :description "Read a marigold page" :inputSchema query-schema}]
+          grow? (conj {:name "grow" :description "Add the extra tool to this catalog" :inputSchema {:type "object" :properties {}}}))))
+
+(defn- grow! []
+  (swap! tools (fn [ts]
+                 (if (some #(= "extra" (:name %)) ts)
+                   ts
+                   (conj ts {:name "extra" :description "Grown marigold tool" :inputSchema query-schema})))))
 
 (defn- arg [params k]
   (let [arguments (or (:arguments params) (get params "arguments"))]
@@ -32,14 +45,14 @@
       (write! {:jsonrpc "2.0"
                :id      id
                :result  {:protocolVersion "2024-11-05"
-                         :capabilities    {:tools {}}
+                         :capabilities    {:tools (if list-changed? {:listChanged true} {})}
                          :serverInfo      {:name "lens" :version "0.1.0"}}})
 
       ("initialized" "notifications/initialized")
       nil
 
       "tools/list"
-      (write! {:jsonrpc "2.0" :id id :result {:tools tools}})
+      (write! {:jsonrpc "2.0" :id id :result {:tools @tools}})
 
       "tools/call"
       (let [tool-name (or (:name params) (get params "name"))
@@ -49,7 +62,10 @@
         (write! {:jsonrpc "2.0"
                  :id      id
                  :result  {:content [{:type "text"
-                                      :text (str "marigold " tool-name " " query)}]}}))
+                                      :text (str "marigold " tool-name " " query)}]}})
+        (when (= "grow" tool-name)
+          (grow!)
+          (write! {:jsonrpc "2.0" :method "notifications/tools/list_changed"})))
 
       (when id
         (write! {:jsonrpc "2.0"

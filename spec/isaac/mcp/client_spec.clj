@@ -46,6 +46,31 @@
         (should (:isError result))
         (should-contain "timeout" (:error result))))
 
+    (it "keeps the server's capabilities and is clean after connect"
+      (let [client (sut/connect! {:command "bb" :args ["test-resources/marigold/lens_mcp.bb" "--grow" "--list-changed"]})]
+        (try
+          (should (sut/list-changed? client))
+          (should-not (sut/dirty? client))
+          (finally (sut/stop! client)))))
+
+    (it "marks a listChanged server dirty when list_changed follows a reply"
+      (let [client (sut/connect! {:command "bb" :args ["test-resources/marigold/lens_mcp.bb" "--grow" "--list-changed"]})]
+        (try
+          (sut/call-tool client "grow" {} 5000)
+          (should (sut/dirty? client))
+          (sut/clear-dirty! client)
+          (should-not (sut/dirty? client))
+          (finally (sut/stop! client)))))
+
+    (it "never marks a server dirty that did not declare listChanged"
+      (let [client (sut/connect! {:command "bb" :args ["test-resources/marigold/lens_mcp.bb" "--grow"]})]
+        (try
+          (should-not (sut/list-changed? client))
+          (sut/call-tool client "grow" {} 5000)
+          (sut/call-tool client "catalog" {"query" "marigold"} 5000)
+          (should-not (sut/dirty? client))
+          (finally (sut/stop! client)))))
+
     (it "stop! destroys the process"
       (let [client (connect-lens)]
         (should (sut/alive? client))

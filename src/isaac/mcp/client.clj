@@ -13,9 +13,35 @@
 
 (def PROTOCOL-VERSION "2024-11-05")
 (def DEFAULT-TIMEOUT-MS 30000)
+(def DRAIN-GRACE-MS
+  "After a reply, keep reading this long for lines the server sent right
+   behind it — a tools/list_changed that follows a mutating call."
+  10)
+
+(def LIST-CHANGED "notifications/tools/list_changed")
 
 (defn registry-name [server-id tool-name]
   (str (name server-id) "__" tool-name))
+
+(defn list-changed?
+  "True when the server declared tools.listChanged at initialize."
+  [client]
+  (let [tools (or (get-in client [:capabilities :tools])
+                  (get-in client [:capabilities "tools"]))]
+    (true? (or (:listChanged tools) (get tools "listChanged")))))
+
+(defn dirty?
+  "True once a tools/list_changed notification was seen from a server that
+   declared listChanged. Cleared by clear-dirty! after a re-catalog."
+  [client]
+  (boolean (some-> (:dirty* client) deref)))
+
+(defn clear-dirty! [client]
+  (some-> (:dirty* client) (reset! false)))
+
+(defn- note-notification! [client msg]
+  (when (and (= LIST-CHANGED (:method msg)) (list-changed? client))
+    (some-> (:dirty* client) (reset! true))))
 
 (defn- drain-stderr! [^java.io.InputStream err]
   (when err
@@ -72,6 +98,14 @@
 (defn- request-id [{:keys [next-id]}]
   (swap! next-id inc))
 
+(defn- drain-trailing! [{:keys [reader buf] :as client}]
+  (loop []
+    (when-let [line (poll-line reader buf (+ (System/currentTimeMillis) DRAIN-GRACE-MS))]
+      (let [msg (jrpc/parse-message line)]
+        (when-not (jrpc/parse-error? msg)
+          (note-notification! client msg)))
+      (recur))))
+
 (defn request!
   ([client method]
    (request! client method nil DEFAULT-TIMEOUT-MS))
@@ -79,18 +113,22 @@
    (request! client method params DEFAULT-TIMEOUT-MS))
   ([{:keys [writer reader buf] :as client} method params timeout-ms]
    (let [id       (request-id client)
-         deadline (+ (System/currentTimeMillis) (or timeout-ms DEFAULT-TIMEOUT-MS))]
-     (jrpc/write-message! writer (jrpc/request id method params))
-     (loop []
-       (if-let [line (poll-line reader buf deadline)]
-         (let [msg (jrpc/parse-message line)]
-           (cond
-             (jrpc/parse-error? msg) (recur)
-             (and (jrpc/result? msg) (= id (:id msg))) {:ok (:result msg)}
-             (and (jrpc/error? msg) (= id (:id msg)))
-             {:error (or (get-in msg [:error :message]) "JSON-RPC error")}
-             :else (recur)))
-         {:error "timeout"})))))
+         deadline (+ (System/currentTimeMillis) (or timeout-ms DEFAULT-TIMEOUT-MS))
+         _        (jrpc/write-message! writer (jrpc/request id method params))
+         response (loop []
+                    (if-let [line (poll-line reader buf deadline)]
+                      (let [msg (jrpc/parse-message line)]
+                        (cond
+                          (jrpc/parse-error? msg) (recur)
+                          (and (jrpc/result? msg) (= id (:id msg))) {:ok (:result msg)}
+                          (and (jrpc/error? msg) (= id (:id msg)))
+                          {:error (or (get-in msg [:error :message]) "JSON-RPC error")}
+                          :else (do (note-notification! client msg)
+                                    (recur))))
+                      {:error "timeout"}))]
+     (when (list-changed? client)
+       (drain-trailing! client))
+     response)))
 
 (defn notify! [{:keys [writer]} method params]
   (jrpc/write-message! writer (jrpc/notification method params)))
@@ -132,7 +170,8 @@
                       :writer  writer
                       :reader  reader
                       :buf     (StringBuilder.)
-                      :next-id (atom 0)}
+                      :next-id (atom 0)
+                      :dirty*  (atom false)}
           init       (request! client
                                "initialize"
                                {:protocolVersion PROTOCOL-VERSION
@@ -146,7 +185,9 @@
 
         :else
         (do (notify! client "notifications/initialized" {})
-            client)))
+            (assoc client :capabilities (or (get-in init [:ok :capabilities])
+                                            (get-in init [:ok "capabilities"])
+                                            {})))))
     (catch Exception e
       {:error (or (.getMessage e) (str (class e)))})))
 

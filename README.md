@@ -1,17 +1,24 @@
-# 🍏 Isaac MCP
+# 🍏 Isaac MCP 🔌
 
-Module endowing Isaac with MCP tool calling powers.
+<img align="left" width="200" src="https://raw.githubusercontent.com/slagyr/isaac-mcp/main/isaac-mcp.png" alt="isaac-mcp" style="margin-right: 20px; margin-bottom: 10px;">
+
+MCP tool calling for [Isaac](https://github.com/slagyr/isaac). Starts
+config-declared MCP servers over stdio, discovers their tools, and registers
+them into the agent tool loop under prefixed names.
 
 Depends on [isaac-foundation](https://github.com/slagyr/isaac-foundation) and
-[isaac-agent](https://github.com/slagyr/isaac-agent). Starts config-declared MCP
-servers over stdio, discovers their tools, and registers them into the agent
-tool loop under prefixed names.
+[isaac-agent](https://github.com/slagyr/isaac-agent). Contributes
+`:isaac.tool.mcp`.
+
+<br>
 
 [![MCP](https://github.com/slagyr/isaac-mcp/actions/workflows/ci-tests.yml/badge.svg)](https://github.com/slagyr/isaac-mcp/actions/workflows/ci-tests.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Clojure](https://img.shields.io/badge/Clojure-1.11%2B-blue?logo=clojure)](https://clojure.org)
 [![Babashka](https://img.shields.io/badge/Babashka-1.3%2B-red?logo=clojure)](https://babashka.org)
 [![Java](https://img.shields.io/badge/Java-21%2B-orange?logo=openjdk)](https://openjdk.org/)
+
+<br clear="left">
 
 ## What's here
 
@@ -42,13 +49,15 @@ plan/
 
 ```sh
 bb spec
+bb features
 bb ci
 ```
 
-From the JVM, compose `:spec` (shared test deps live on the alias):
+From the JVM:
 
 ```sh
 clj -M:spec
+clj -M:features
 ```
 
 ## Consumer coordinate

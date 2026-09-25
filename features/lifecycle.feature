@@ -48,6 +48,7 @@ Feature: MCP stdio lifecycle
       | model | type             | content                |
       | echo  | text             | Both catalogued.       |
     When the Isaac system is started
+    And the MCP servers have connected
     And the user sends "catalog marigold twice" on session "tools-test"
     Then the prompt has tools:
       | name             |
@@ -77,6 +78,7 @@ Feature: MCP stdio lifecycle
       | model | type          | content            |
       | echo  | text          | It hung.           |
     When the Isaac system is started
+    And the MCP servers have connected
     And the user sends "stare at the lens" on session "tools-test"
     Then session "tools-test" has transcript matching:
       | type    | message.role | message.content |

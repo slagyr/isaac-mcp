@@ -53,7 +53,9 @@
 
   (around [it]
     (nexus/-with-nexus {}
-      (it)))
+      ;; Server semantics by default: the runner is up, turns never wait.
+      (with-redefs [sut/long-lived-process? (constantly true)]
+        (it))))
 
   (after (sut/stop!))
 
@@ -204,6 +206,20 @@
             (should-be-nil (registry/lookup "lens__catalog"))
             (should= [] (events :mcp/connected))
             (should= {} (:clients @@#'sut/state*))))))
+
+    (it "a one-shot process settles the catalog on its first turn"
+      (with-redefs [sut/long-lived-process? (constantly false)]
+        (helper/with-config {:mcp {:lens lens-server}}
+          (should= ["lens__catalog" "lens__read"] (sort (sut/ensure-server! "lens")))
+          (should (registry/lookup "lens__catalog")))))
+
+    (it "a one-shot process gets nil once a hung server's connect fails, and the hold applies"
+      (with-redefs [sut/long-lived-process? (constantly false)]
+        (helper/with-config {:mcp {:lens hung-server}}
+          (should-be-nil (sut/ensure-server! "lens"))
+          (sut/await-connects!)
+          (should= 1 (count (events :mcp/connect-failed)))
+          (should= 1 (count (events :mcp/connect-held))))))
 
     (it "logs connect-failed and connect-held once per failure, connected on success"
       (helper/with-config {:mcp {:lens dead-server :skybeam lens-server}}

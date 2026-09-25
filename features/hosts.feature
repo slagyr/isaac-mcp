@@ -17,7 +17,6 @@ Feature: MCP tools reach every host
       | model | type          | content                |
       | echo  | text          | Catalogued.            |
 
-  @wip
   Scenario: the prompt command offers and invokes an MCP tool
     When isaac is run with "prompt --crew main --session lens-run -m 'find marigold'"
     Then the exit code is 0
@@ -27,7 +26,6 @@ Feature: MCP tools reach every host
       | message | toolResult   | #".*marigold.*" |
       | message | assistant    | Catalogued.     |
 
-  @wip
   Scenario: an acp session invokes an MCP tool
     Given the following sessions exist:
       | name     |

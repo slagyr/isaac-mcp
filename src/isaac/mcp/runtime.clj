@@ -6,6 +6,7 @@
     [isaac.logger :as log]
     [isaac.mcp.client :as client]
     [isaac.reconfigurable :as reconfigurable]
+    [isaac.runner :as runner]
     [isaac.tool.registry :as registry]))
 
 (def RETRY-HOLD-MS
@@ -211,6 +212,15 @@
       (reset! state* (assoc (fresh-state) :generation (inc generation)))))
   nil)
 
+(defn long-lived-process?
+  "True inside the runner (the server process): a turn there never waits
+   on an MCP server (isaac-aswr). A one-shot process — `isaac prompt`
+   outside a server — has only its first turn, so that turn settles the
+   catalog, bounded by the server's own timeout; otherwise MCP tools would
+   never reach it."
+  []
+  (runner/running?))
+
 (defn- server-config
   "The configured server under `ns-str`; the committed table may key slots
    by keyword or string."
@@ -223,7 +233,9 @@
    registered for the server configured under `ns-str`, or nil. With no
    live client, no connect in flight and no failure hold, it starts a
    background connect; the tools join the registry when it lands and are
-   on the next turn's prompt. Declines (nil) an unconfigured id."
+   on the next turn's prompt. Declines (nil) an unconfigured id. Outside
+   the runner (a one-shot process) it waits for that connect instead —
+   see long-lived-process?."
   ([ns-str] (ensure-server! ns-str nil))
   ([ns-str _module-index]
    (let [id (keyword ns-str)]
@@ -234,8 +246,10 @@
        (let [servers (:mcp (or (loader/snapshot "mcp ensure-server") {}))
              server  (server-config servers ns-str)]
          (when (and server (not (held? id (now-ms))))
-           (connect-async! id server))
-         nil)))))
+           (connect-async! id server)
+           (when-not (long-lived-process?)
+             (await-connect! id (timeout-ms server))
+             (get-in @state* [:clients id :tools]))))))))
 
 (defn start!
   "Boot MCP servers from an explicit servers map, or from the committed

@@ -17,7 +17,6 @@ Feature: MCP tools in a turn
       | name       |
       | tools-test |
     When the Isaac system is started
-    And the MCP servers have connected
     And the user sends "hello" on session "tools-test"
     Then the prompt has tools:
       | name          |
@@ -42,7 +41,6 @@ Feature: MCP tools in a turn
       | model | type          | content                |
       | echo  | text          | Catalogued.            |
     When the Isaac system is started
-    And the MCP servers have connected
     And the user sends "catalog marigold" on session "tools-test"
     Then session "tools-test" has transcript matching:
       | type    | message.role | message.content |

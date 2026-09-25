@@ -50,9 +50,3 @@
 
 (defwhen "the Isaac system is started" isaac.mcp-steps/isaac-system-started)
 
-(defn mcp-servers-have-connected []
-  (let [await (requiring-resolve 'isaac.mcp.runtime/await-connects!)]
-    (await)))
-
-(defwhen "the MCP servers have connected" isaac.mcp-steps/mcp-servers-have-connected)
-

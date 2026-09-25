@@ -50,3 +50,20 @@
 
 (defwhen "the Isaac system is started" isaac.mcp-steps/isaac-system-started)
 
+(defn mcp-servers-have-connected
+  "A turn never waits on an MCP server (isaac-aswr), so a scenario that
+   needs a server's tools on its first turn settles the catalog first:
+   reach every configured server through the production tool-provider
+   entry (what an earlier turn would have done — not start!), then wait
+   for the background connects to land. One server at a time, by id, so
+   the :mcp/connected log order is deterministic."
+  []
+  (let [ensure! (requiring-resolve 'isaac.mcp.runtime/ensure-server!)
+        await!  (requiring-resolve 'isaac.mcp.runtime/await-connects!)
+        servers (:mcp (or (loader/snapshot "mcp feature connect") {}))]
+    (doseq [id (sort (map name (keys servers)))]
+      (ensure! id)
+      (await!))))
+
+(defwhen "the MCP servers have connected" isaac.mcp-steps/mcp-servers-have-connected)
+

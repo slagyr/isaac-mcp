@@ -27,6 +27,7 @@ Feature: MCP catalog honors tools/list_changed
       | mcp.lens.command | bb |
       | mcp.lens.args    | ["test-resources/marigold/lens_mcp.bb", "--grow", "--list-changed"] |
     When the Isaac system is started
+    And the MCP servers have connected
     And the user sends "grow" on session "tools-test"
     And the user sends "what now" on session "tools-test"
     Then the prompt has tools:
@@ -44,6 +45,7 @@ Feature: MCP catalog honors tools/list_changed
       | mcp.lens.command | bb |
       | mcp.lens.args    | ["test-resources/marigold/lens_mcp.bb", "--grow"] |
     When the Isaac system is started
+    And the MCP servers have connected
     And the user sends "grow" on session "tools-test"
     And the user sends "what now" on session "tools-test"
     Then the prompt has tools:

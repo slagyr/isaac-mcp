@@ -38,14 +38,14 @@
 
 (defn- mcp-arguments
   "The model's arguments only: drops the keys the turn injects for
-   Isaac's own tools (session_key, state_dir) and any callable the drive
-   attaches (progress!) — none of it is JSON and none of it is the
-   server's business."
+   Isaac's own tools (session_key, state_dir, caller_crew) and any
+   callable the drive attaches (progress!). None of it is the server's
+   business, and a schema with additionalProperties false rejects it."
   [args]
   (reduce-kv
     (fn [m k v]
       (let [sk (if (keyword? k) (name k) (str k))]
-        (if (or (#{"session_key" "state_dir"} sk) (fn? v))
+        (if (or (#{"session_key" "state_dir" "caller_crew"} sk) (fn? v))
           m
           (assoc m sk v))))
     {}

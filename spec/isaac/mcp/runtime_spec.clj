@@ -281,12 +281,13 @@
     (it "strips injected keys and callables before calling the server"
       (sut/start! {:lens lens-server})
       (sut/await-connects!)
-      (let [result (registry/execute "lens__catalog" {"query"      "marigold"
+      (let [result (registry/execute "lens__catalog" {"query"       "keys"
                                                        "session_key" "s1"
                                                        "state_dir"   "/tmp"
+                                                       "caller_crew" "yopp"
                                                        :progress!    (fn [_] nil)})]
         (should-not (:isError result))
-        (should-contain "marigold" (:result result))))
+        (should= "query" (:result result))))
 
     (it "keeps two servers with the same MCP tool name distinct"
       (sut/start! {:lens lens-server :skybeam lens-server})

@@ -56,13 +56,19 @@
 
       "tools/call"
       (let [tool-name (or (:name params) (get params "name"))
-            query     (arg params :query)]
+            arguments (or (:arguments params) (get params "arguments") {})
+            query     (arg params :query)
+            keys      (->> (keys arguments)
+                           (map #(if (keyword? %) (name %) (str %)))
+                           sort
+                           (str/join ","))
+            text      (if (= "keys" query) keys (str "marigold " tool-name " " query))]
         (when (and (= "catalog" tool-name) (= "stare" query))
           (Thread/sleep 10000))
         (write! {:jsonrpc "2.0"
                  :id      id
                  :result  {:content [{:type "text"
-                                      :text (str "marigold " tool-name " " query)}]}})
+                                      :text text}]}})
         (when (= "grow" tool-name)
           (grow!)
           (write! {:jsonrpc "2.0" :method "notifications/tools/list_changed"})))

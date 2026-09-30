@@ -2,6 +2,7 @@
  :version "0.1.3",
  :builtin? true,
  :factory isaac.mcp.module/create-module,
+ :handbook "isaac/mcp/handbook.md",
  :isaac.agent/tool-providers {:mcp {:ensure! isaac.mcp.runtime/ensure-server!}},
  :isaac.config/schema
  {:mcp

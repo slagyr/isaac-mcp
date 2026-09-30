@@ -1,6 +1,6 @@
-(ns isaac.mcp.client-spec
+(ns isaac.tool.mcp.client-spec
   (:require
-    [isaac.mcp.client :as sut]
+    [isaac.tool.mcp.client :as sut]
     [speclj.core :refer [after context describe it should should-be-nil should-contain should-not should=]]))
 
 (def lens-args ["test-resources/marigold/lens_mcp.bb"])
@@ -14,7 +14,7 @@
      (reset! live* client)
      client)))
 
-(describe "isaac.mcp.client"
+(describe "isaac.tool.mcp.client"
 
   (after (do (when-let [client @live*]
                (when-not (:error client)

@@ -1,4 +1,4 @@
-(ns isaac.mcp-steps
+(ns isaac.tool.mcp.mcp-steps
   "One new helper: reuse the established 'the Isaac system is started' phrase
    (cron/hail) to commit the feature config. Nothing starts the MCP runtime
    by hand (isaac-vadd): the first turn that allows a server's namespace
@@ -7,14 +7,14 @@
   (:require
     [clojure.string :as str]
     [gherclj.core :as g :refer [defwhen after-all after-scenario helper!]]
-    [isaac.cli.registry :as cli-registry]
     [isaac.comm.acp.cli :as acp-cli]
-    [isaac.config.loader :as loader]
+    [isaac.foundation.cli.registry :as cli-registry]
     [isaac.foundation.cli-steps :as cli-steps]
-    [isaac.fs :as fs]
-    [isaac.nexus :as nexus]))
+    [isaac.foundation.config.loader :as loader]
+    [isaac.foundation.fs :as fs]
+    [isaac.foundation.nexus :as nexus]))
 
-(helper! isaac.mcp-steps)
+(helper! isaac.tool.mcp.mcp-steps)
 
 ;; hosts.feature runs `isaac acp` through main/run. The ACP module is not
 ;; :builtin?, so with no on-disk isaac.edn declaring it the command is not
@@ -41,14 +41,14 @@
 
 (defn isaac-system-stopped []
   (try
-    ((requiring-resolve 'isaac.mcp.runtime/stop!))
+    ((requiring-resolve 'isaac.tool.mcp.runtime/stop!))
     (catch Exception _)))
 
 (after-scenario isaac-system-stopped)
 
 (after-all shutdown-agents)
 
-(defwhen "the Isaac system is started" isaac.mcp-steps/isaac-system-started)
+(defwhen "the Isaac system is started" isaac.tool.mcp.mcp-steps/isaac-system-started)
 
 (defn mcp-servers-have-connected
   "A turn never waits on an MCP server (isaac-aswr), so a scenario that
@@ -58,12 +58,12 @@
    for the background connects to land. One server at a time, by id, so
    the :mcp/connected log order is deterministic."
   []
-  (let [ensure! (requiring-resolve 'isaac.mcp.runtime/ensure-server!)
-        await!  (requiring-resolve 'isaac.mcp.runtime/await-connects!)
+  (let [ensure! (requiring-resolve 'isaac.tool.mcp.runtime/ensure-server!)
+        await!  (requiring-resolve 'isaac.tool.mcp.runtime/await-connects!)
         servers (:mcp (or (loader/snapshot "mcp feature connect") {}))]
     (doseq [id (sort (map name (keys servers)))]
       (ensure! id)
       (await!))))
 
-(defwhen "the MCP servers have connected" isaac.mcp-steps/mcp-servers-have-connected)
+(defwhen "the MCP servers have connected" isaac.tool.mcp.mcp-steps/mcp-servers-have-connected)
 

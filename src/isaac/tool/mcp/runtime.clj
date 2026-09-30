@@ -1,13 +1,13 @@
-(ns isaac.mcp.runtime
+(ns isaac.tool.mcp.runtime
   "Start/stop configured MCP servers and register prefixed tools.
    Reconfigurable so a later hot-reload bean is not a rewrite."
   (:require
-    [isaac.config.loader :as loader]
-    [isaac.logger :as log]
-    [isaac.mcp.client :as client]
-    [isaac.reconfigurable :as reconfigurable]
-    [isaac.runner :as runner]
-    [isaac.tool.registry :as registry]))
+    [isaac.agent.tool.registry :as registry]
+    [isaac.foundation.config.loader :as loader]
+    [isaac.foundation.logger :as log]
+    [isaac.foundation.reconfigurable :as reconfigurable]
+    [isaac.foundation.runner :as runner]
+    [isaac.tool.mcp.client :as client]))
 
 (def RETRY-HOLD-MS
   "The first hold after a failed connect (isaac-vadd). Each consecutive

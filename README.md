@@ -22,12 +22,12 @@ Depends on [isaac-foundation](https://github.com/slagyr/isaac-foundation) and
 
 ## What's here
 
-- Module `:isaac.tool.mcp` (`isaac.mcp.module/create-module`).
+- Module `:isaac.tool.mcp` (`isaac.tool.mcp.module/create-module`).
 - Config schema for the `:mcp` table — entity files under `config/mcp/`, one per
   server. `:command` is required; `:args`, `:env`, `:cwd` and `:timeout-ms`
   (per-call, default 30000ms) are optional. Transport is stdio only.
 - Tool discovery and registration into the agent tool loop. On load,
-  `isaac.mcp.runtime` connects each configured server, lists its tools, and
+  `isaac.tool.mcp.runtime` connects each configured server, lists its tools, and
   registers every one with the agent's tool registry — handler, description and
   the MCP `inputSchema` as parameters.
 - Registered names are `<server-id>__<tool-name>`, so a server declared as

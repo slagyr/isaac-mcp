@@ -1,12 +1,12 @@
-(ns isaac.mcp.runtime-spec
+(ns isaac.tool.mcp.runtime-spec
   (:require
-    [isaac.logger :as log]
-    [isaac.mcp.client :as client]
-    [isaac.mcp.runtime :as sut]
-    [isaac.nexus :as nexus]
-    [isaac.reconfigurable :as reconfigurable]
-    [isaac.spec-helper :as helper]
-    [isaac.tool.registry :as registry]
+    [isaac.agent.tool.registry :as registry]
+    [isaac.foundation.logger :as log]
+    [isaac.foundation.nexus :as nexus]
+    [isaac.foundation.reconfigurable :as reconfigurable]
+    [isaac.foundation.spec-helper :as helper]
+    [isaac.tool.mcp.client :as client]
+    [isaac.tool.mcp.runtime :as sut]
     [speclj.core :refer [after around context describe it should should-be-nil should-contain should-not should-not-contain should=]]))
 
 (def lens-server
@@ -47,7 +47,7 @@
   (let [real client/connect!]
     (fn [server] (swap! spawns inc) (real server))))
 
-(describe "isaac.mcp.runtime"
+(describe "isaac.tool.mcp.runtime"
 
   (helper/with-captured-logs)
 

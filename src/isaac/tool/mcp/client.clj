@@ -1,10 +1,10 @@
-(ns isaac.mcp.client
+(ns isaac.tool.mcp.client
   "Stdio JSON-RPC NDJSON client for one MCP server process.
    Reads are polled on the caller thread — no future, no non-daemon reader."
   (:require
     [clojure.java.io :as io]
     [clojure.string :as str]
-    [isaac.util.jsonrpc :as jrpc])
+    [isaac.agent.util.jsonrpc :as jrpc])
   (:import
     (java.io BufferedReader InputStreamReader OutputStreamWriter Reader Writer)
     (java.lang Process ProcessBuilder ProcessHandle StringBuilder)

@@ -1,20 +1,20 @@
-(ns isaac.mcp.module-spec
+(ns isaac.tool.mcp.module-spec
   (:require
     [clojure.edn :as edn]
-    [isaac.module.protocol]
-    [isaac.mcp.module :as sut]
+    [isaac.foundation.module.protocol]
+    [isaac.tool.mcp.module :as sut]
     [speclj.core :refer [context describe it should should-be-nil should=]]))
 
 (def manifest
   (edn/read-string (slurp "resources/isaac-manifest.edn")))
 
-(describe "isaac.mcp.module"
+(describe "isaac.tool.mcp.module"
 
   (it "returns a module"
-    (should (satisfies? isaac.module.protocol/Module (sut/create-module))))
+    (should (satisfies? isaac.foundation.module.protocol/Module (sut/create-module))))
 
   (it "contributes ensure-server! to the :isaac.agent/tool-providers berth"
-    (should= 'isaac.mcp.runtime/ensure-server!
+    (should= 'isaac.tool.mcp.runtime/ensure-server!
              (get-in manifest [:isaac.agent/tool-providers :mcp :ensure!])))
 
   (context "config schema"

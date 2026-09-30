@@ -1,4 +1,4 @@
-(ns isaac.mcp.handbook-chapter-spec
+(ns isaac.tool.mcp.handbook-chapter-spec
   "Lint for isaac-mcp's own handbook chapter (isaac-q6zb): a backtick
    `config:<dotted.path>` reference (no angle-bracket placeholder inside the
    path) is checked against the composed config schema, and the word right
@@ -12,14 +12,14 @@
   (:require
     [clojure.java.io :as io]
     [clojure.string :as str]
-    [isaac.config.schema-compose :as schema-compose]
-    [isaac.config.schema.resolve :as schema-resolve]
-    [isaac.fs :as fs]
-    [isaac.module.discovery :as discovery]
-    [isaac.nexus :as nexus]
+    [isaac.foundation.config.schema-compose :as schema-compose]
+    [isaac.foundation.config.schema.resolve :as schema-resolve]
+    [isaac.foundation.fs :as fs]
+    [isaac.foundation.module.discovery :as discovery]
+    [isaac.foundation.nexus :as nexus]
     [speclj.core :refer [around describe it should-not-be-nil should=]]))
 
-(def ^:private chapter-resource "isaac/mcp/handbook.md")
+(def ^:private chapter-resource "isaac/tool/mcp/handbook.md")
 
 (defn- chapter-text []
   (some-> (io/resource chapter-resource) slurp))
@@ -46,7 +46,7 @@
   "Top-level command names contributed to the :isaac/cli berth by every
    module in `index` (builtin only, for this repo's own spec) — read
    directly off each module's manifest rather than through
-   isaac.module.berths, whose report helpers vary across pinned foundation
+   isaac.foundation.module.berths, whose report helpers vary across pinned foundation
    shas."
   [index]
   (->> (vals index)

@@ -1,9 +1,13 @@
 (ns isaac.mcp.handbook-chapter-spec
-  "Lint for isaac-mcp's own handbook chapter (isaac-q6zb): every backtick
-   `config:<path>` reference must resolve against the composed config schema,
-   and every `isaac <command>` invocation must name a registered top-level
-   CLI command. See the convention comment at the top of the chapter file
-   itself, and isaac.foundation.handbook-chapter-spec / isaac.hail's
+  "Lint for isaac-mcp's own handbook chapter (isaac-q6zb): a backtick
+   `config:<dotted.path>` reference (no angle-bracket placeholder inside the
+   path) is checked against the composed config schema, and the word right
+   after `isaac ` in `isaac <command>` is checked against the registered
+   top-level CLI commands. Keep both literal and real when you write one —
+   this lint fails the build once either drifts from what Isaac actually
+   exposes. `<placeholder>` shapes (e.g. `config:<dotted.path>` itself, or
+   `<module-id>#<slug>`) are intentionally skipped. See
+   isaac.foundation.handbook-chapter-spec / isaac.hail's
    handbook-chapter-spec for the pattern this follows."
   (:require
     [clojure.java.io :as io]

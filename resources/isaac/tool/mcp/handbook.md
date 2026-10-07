@@ -117,12 +117,12 @@ Isaac's directory-grant system has no visibility into it. A server's
 `cwd` (above) only sets where its *process* starts; it isn't a permission
 boundary.
 
-Isaac also strips a few keys before an MCP server ever sees a call's
-arguments: `session_key`, `state_dir`, `caller_crew`, and any callable
-value (like a progress callback) a driven turn attaches. Those are Isaac's
-own per-turn context, not the model's arguments, and a server whose input
-schema sets `additionalProperties: false` would otherwise reject the call
-outright.
+Isaac forwards only the argument keys the tool's own input schema
+declares. Injected per-turn context (`session_key`, `request_id`,
+`caller_crew`, `session_store`, a progress callback) and any key the
+model invented never reach the server. A schema with no properties is
+called with no arguments. Servers that set `additionalProperties: false`
+would otherwise reject the extra keys outright.
 
 **How to verify.** After granting a tool and confirming the server has
 connected (see Connecting), the next turn for that crew should offer it —
@@ -141,9 +141,9 @@ allow/deny.
   actual collision, the two entries likely share the same server id by
   mistake (check `config get mcp` for duplicate keys).
 - **A call seems to be missing an argument named `session_key`,
-  `state_dir`, or `caller_crew`.** Expected — those are stripped before the
-  server ever sees the arguments (isaac-r5j4); they're Isaac's context, not
-  something an MCP server should need.
+  `request_id`, `caller_crew`, or `session_store`.** Expected — Isaac
+  forwards only the keys the tool's schema declares (isaac-qqtc); those
+  are Isaac's context, not something an MCP server should need.
 - **Granting `fs/*` doesn't change what an MCP tool can touch.** Directory
   grants are an `fs/*`-only mechanism (`isaac.agent#tools-and-directories`)
   and never apply to an MCP server's own filesystem or network access.

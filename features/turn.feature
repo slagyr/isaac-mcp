@@ -76,7 +76,6 @@ Feature: MCP tools in a turn
       | name          |
       | lens__catalog |
 
-  @wip
   Scenario: a remote tool is called with only the keys its schema declares
     The drive injects session_key, caller_crew, request_id and a progress
     function into every tool call, and compaction injects session_store.

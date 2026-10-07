@@ -36,20 +36,27 @@
 (defn- timeout-ms [server]
   (or (:timeout-ms server) client/DEFAULT-TIMEOUT-MS))
 
+(defn- param-key [k]
+  (if (keyword? k) (name k) (str k)))
+
 (defn- mcp-arguments
-  "The model's arguments only: drops the keys the turn injects for
-   Isaac's own tools (session_key, state_dir, caller_crew) and any
-   callable the drive attaches (progress!). None of it is the server's
-   business, and a schema with additionalProperties false rejects it."
-  [args]
-  (reduce-kv
-    (fn [m k v]
-      (let [sk (if (keyword? k) (name k) (str k))]
-        (if (or (#{"session_key" "state_dir" "caller_crew"} sk) (fn? v))
-          m
-          (assoc m sk v))))
-    {}
-    (or args {})))
+  "Keep only the keys the tool's own inputSchema declares. Injected
+   Isaac keys (session_key, request_id, caller_crew, session_store), a
+   progress fn, and any key the model invented are dropped. A schema
+   with no properties is called with no arguments."
+  [params args]
+  (let [allowed (->> (or (:properties params) (get params "properties") {})
+                     keys
+                     (map param-key)
+                     set)]
+    (reduce-kv
+      (fn [m k v]
+        (let [sk (param-key k)]
+          (if (contains? allowed sk)
+            (assoc m sk v)
+            m)))
+      {}
+      (or args {}))))
 
 (defn- unregister-tools! [names]
   (doseq [name names]
@@ -100,7 +107,7 @@
        :description (or (:description mcp-tool) (get mcp-tool "description") "")
        :parameters  params
        :handler     (fn [args]
-                      (call-server! server-id mcp-name (mcp-arguments args) timeout))})
+                      (call-server! server-id mcp-name (mcp-arguments params args) timeout))})
     reg-name))
 
 (defn- open-server

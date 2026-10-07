@@ -278,16 +278,33 @@
         (should-not (:isError result))
         (should-contain "marigold" (:result result))))
 
-    (it "strips injected keys and callables before calling the server"
+    (it "forwards only the keys the tool's schema declares"
       (sut/start! {:lens lens-server})
       (sut/await-connects!)
-      (let [result (registry/execute "lens__catalog" {"query"       "keys"
-                                                       "session_key" "s1"
-                                                       "state_dir"   "/tmp"
-                                                       "caller_crew" "yopp"
-                                                       :progress!    (fn [_] nil)})]
+      (let [result (registry/execute "lens__catalog" {"query"         "keys"
+                                                       "session_key"   "s1"
+                                                       "state_dir"     "/tmp"
+                                                       "caller_crew"   "yopp"
+                                                       "request_id"    "r1"
+                                                       "session_store" "store"
+                                                       "invented"      "nope"
+                                                       :progress!      (fn [_] nil)})]
         (should-not (:isError result))
         (should= "query" (:result result))))
+
+    (it "calls a tool with no declared properties with no arguments"
+      (sut/start! {:lens lens-grow})
+      (sut/await-connects!)
+      (let [captured (atom nil)
+            real     client/call-tool]
+        (with-redefs [client/call-tool (fn [c name args timeout]
+                                         (reset! captured args)
+                                         (real c name args timeout))]
+          (let [result (registry/execute "lens__grow" {"query"      "keys"
+                                                       "request_id" "r1"
+                                                       :progress!   (fn [_] nil)})]
+            (should-not (:isError result))
+            (should= {} @captured)))))
 
     (it "keeps two servers with the same MCP tool name distinct"
       (sut/start! {:lens lens-server :skybeam lens-server})

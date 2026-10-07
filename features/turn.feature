@@ -75,3 +75,29 @@ Feature: MCP tools in a turn
     Then the prompt does not have tools:
       | name          |
       | lens__catalog |
+
+  @wip
+  Scenario: a remote tool is called with only the keys its schema declares
+    The drive injects session_key, caller_crew, request_id and a progress
+    function into every tool call, and compaction injects session_store.
+    Lens catalog declares only query. Asking it for its keys must come back
+    as "query" — a strict server rejects anything else.
+    Given config:
+      | mcp.lens.command | bb |
+      | mcp.lens.args    | ["test-resources/marigold/lens_mcp.bb"] |
+    And the crew "main" allows tools: "lens/catalog"
+    And the following sessions exist:
+      | name       |
+      | tools-test |
+    And the following model responses are queued:
+      | model | tool_call     | arguments        |
+      | echo  | lens__catalog | {"query":"keys"} |
+      | model | type          | content          |
+      | echo  | text          | Catalogued.      |
+    When the Isaac system is started
+    And the MCP servers have connected
+    And the user sends "what keys did lens see" on session "tools-test"
+    Then session "tools-test" has transcript matching:
+      | type    | message.role | message.content |
+      | message | toolResult   | query           |
+      | message | assistant    | Catalogued.     |

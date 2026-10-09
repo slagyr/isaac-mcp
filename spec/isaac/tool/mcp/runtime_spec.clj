@@ -284,7 +284,7 @@
       (let [result (registry/execute "lens__catalog" {"query"         "keys"
                                                        "session_key"   "s1"
                                                        "state_dir"     "/tmp"
-                                                       "caller_crew"   "yopp"
+                                                       "caller_crew"   "bartholomew"
                                                        "request_id"    "r1"
                                                        "session_store" "store"
                                                        "invented"      "nope"

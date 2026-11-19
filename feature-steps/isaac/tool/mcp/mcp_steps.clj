@@ -67,3 +67,12 @@
 
 (defwhen "the MCP servers have connected" isaac.tool.mcp.mcp-steps/mcp-servers-have-connected)
 
+
+(defn background-connects-landed
+  "Wait for in-flight background connects only. Unlike 'the MCP servers have
+   connected', this reaches no server itself, so it shows what boot alone
+   connected."
+  []
+  ((requiring-resolve 'isaac.tool.mcp.runtime/await-connects!)))
+
+(defwhen "the background MCP connects have landed" isaac.tool.mcp.mcp-steps/background-connects-landed)

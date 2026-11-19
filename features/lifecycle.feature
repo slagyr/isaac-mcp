@@ -33,6 +33,17 @@ Feature: MCP stdio lifecycle
       | type    | message.role | message.content |
       | message | assistant    | Still here      |
 
+  @wip
+  Scenario: configured servers connect when Isaac starts, before any turn
+    Given config:
+      | mcp.lens.command | bb                                      |
+      | mcp.lens.args    | ["test-resources/marigold/lens_mcp.bb"] |
+    When the Isaac system is started
+    And the background MCP connects have landed
+    Then the log has entries matching:
+      | level | event          | server | #comment                   |
+      | :info | :mcp/connected | lens   | no turn has asked for lens |
+
   Scenario: two servers with the same MCP tool name stay distinct
     Given config:
       | mcp.lens.command    | bb |

@@ -60,7 +60,7 @@
   (after (sut/stop!))
 
   (it "make returns a Reconfigurable"
-    (should (satisfies? reconfigurable/Reconfigurable (sut/make [:mcp] {}))))
+    (should (satisfies? reconfigurable/Reconfigurable (sut/make {}))))
 
   (it "start! does not throw on a dead command"
     (sut/start! {:lens dead-server})
@@ -306,6 +306,23 @@
             (should-not (:isError result))
             (should= {} @captured)))))
 
+    (it "records boot connections in server-id order when skybeam answers first"
+      (let [release-lens  (promise)
+            skybeam-ready (promise)
+            real          client/connect!]
+        (with-redefs [client/connect! (fn [server]
+                                       (when (= :lens (:id server)) @release-lens)
+                                       (let [client (real server)]
+                                         (when (= :skybeam (:id server)) (deliver skybeam-ready true))
+                                         client))]
+          (sut/start! {:skybeam (assoc lens-server :id :skybeam)
+                       :lens (assoc lens-server :id :lens)})
+          (try
+            (should= true (deref skybeam-ready 10000 nil))
+            (finally (deliver release-lens true)))
+          (sut/await-connects!)
+          (should= [:lens :skybeam] (map :server (events :mcp/connected))))))
+
     (it "keeps two servers with the same MCP tool name distinct"
       (sut/start! {:lens lens-server :skybeam lens-server})
       (sut/await-connects!)
@@ -316,8 +333,17 @@
         (should-contain "marigold" (:result lens))
         (should-contain "marigold" (:result skybeam))))
 
+    (it "a config change replaces the old server catalog"
+      (let [runtime (sut/make {})]
+        (reconfigurable/on-load runtime {:lens lens-server})
+        (sut/await-connects!)
+        (reconfigurable/on-config-change! runtime {:lens lens-server} {:skybeam lens-server})
+        (sut/await-connects!)
+        (should-be-nil (registry/lookup "lens__catalog"))
+        (should (registry/lookup "skybeam__catalog"))))
+
     (it "on-unload stops servers and unregisters tools"
-      (let [runtime (sut/make [:mcp] {})]
+      (let [runtime (sut/make {})]
         (reconfigurable/on-load runtime {:lens lens-server})
         (sut/await-connects!)
         (should (registry/lookup "lens__catalog"))

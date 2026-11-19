@@ -17,6 +17,10 @@
     (should= 'isaac.tool.mcp.runtime/ensure-server!
              (get-in manifest [:isaac.agent/tool-providers :mcp :ensure!])))
 
+  (it "declares a boot-reconciled MCP component for the entire server table"
+    (should= {:path [:mcp] :impl "mcp" :factory 'isaac.tool.mcp.runtime/make}
+             (get-in manifest [:isaac.config/component :mcp])))
+
   (context "config schema"
 
     (it "requires command on each server"

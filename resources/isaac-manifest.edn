@@ -4,6 +4,8 @@
  :factory isaac.tool.mcp.module/create-module,
  :handbook "isaac/tool/mcp/handbook.md",
  :isaac.agent/tool-providers {:mcp {:ensure! isaac.tool.mcp.runtime/ensure-server!}},
+ :isaac.config/component
+ {:mcp {:path [:mcp] :impl "mcp" :factory isaac.tool.mcp.runtime/make}},
  :isaac.config/schema
  {:mcp
   {:entity-dir "mcp",

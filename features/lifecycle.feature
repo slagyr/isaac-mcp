@@ -33,7 +33,6 @@ Feature: MCP stdio lifecycle
       | type    | message.role | message.content |
       | message | assistant    | Still here      |
 
-  @wip
   Scenario: configured servers connect when Isaac starts, before any turn
     Given config:
       | mcp.lens.command | bb                                      |

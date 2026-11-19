@@ -1,16 +1,16 @@
 (ns isaac.tool.mcp.mcp-steps
-  "One new helper: reuse the established 'the Isaac system is started' phrase
-   (cron/hail) to commit the feature config. Nothing starts the MCP runtime
-   by hand (isaac-vadd): the first turn that allows a server's namespace
-   reaches it through the :isaac.agent/tool-providers berth, exactly as a
-   production host does."
+  "The Isaac system step commits feature config and reconciles the MCP
+   component through the same boot hook used by the production host.
+   Turns still reach already-connected tools through the provider berth."
   (:require
     [clojure.string :as str]
     [gherclj.core :as g :refer [defwhen after-all after-scenario helper!]]
     [isaac.comm.acp.cli :as acp-cli]
     [isaac.foundation.cli.registry :as cli-registry]
     [isaac.foundation.cli-steps :as cli-steps]
+    [isaac.foundation.config.configurator :as configurator]
     [isaac.foundation.config.loader :as loader]
+    [isaac.foundation.config.runtime :as config-runtime]
     [isaac.foundation.fs :as fs]
     [isaac.foundation.nexus :as nexus]))
 
@@ -37,11 +37,16 @@
 (defn isaac-system-started []
   (let [fs*  (or (g/get :mem-fs) (nexus/get :fs) (fs/real-fs))
         root (or (g/get :runtime-root-dir) (g/get :root))]
-    (loader/load-config! root fs* "mcp feature start")))
+    (let [config      (loader/load-config! root fs* "mcp feature start")
+          registries  (configurator/declared-registries (:module-index config))]
+      (config-runtime/install! {:config config :registries registries
+                                :host {:module-index (:module-index config)}}))))
 
 (defn isaac-system-stopped []
   (try
-    ((requiring-resolve 'isaac.tool.mcp.runtime/stop!))
+    (when-let [runtime (nexus/get-in [:mcp])]
+      ((requiring-resolve 'isaac.foundation.reconfigurable/on-unload) runtime nil)
+      (nexus/deregister! [:mcp]))
     (catch Exception _)))
 
 (after-scenario isaac-system-stopped)
@@ -51,12 +56,9 @@
 (defwhen "the Isaac system is started" isaac.tool.mcp.mcp-steps/isaac-system-started)
 
 (defn mcp-servers-have-connected
-  "A turn never waits on an MCP server (isaac-aswr), so a scenario that
-   needs a server's tools on its first turn settles the catalog first:
-   reach every configured server through the production tool-provider
-   entry (what an earlier turn would have done — not start!), then wait
-   for the background connects to land. One server at a time, by id, so
-   the :mcp/connected log order is deterministic."
+  "A turn never waits on an MCP server (isaac-aswr). Wait for the boot
+   background connects to land before a scenario that needs tools. The
+   already-settled servers are checked in id order for stable log order."
   []
   (let [ensure! (requiring-resolve 'isaac.tool.mcp.runtime/ensure-server!)
         await!  (requiring-resolve 'isaac.tool.mcp.runtime/await-connects!)

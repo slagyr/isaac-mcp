@@ -186,17 +186,21 @@
 (defn- connect-async!
   "Start connecting `id` on a background thread unless a connect is already
    in flight. Never waits on the server."
-  [id server]
-  (locking finish-lock
-    (when-not (get-in @state* [:pending id])
-      (let [generation (:generation @state*)
-            task       (future
-                         (finish-connect! id server generation
-                                          (try (open-server server)
-                                               (catch Throwable e
-                                                 {:error (or (.getMessage e) (str (class e)))}))))]
-        (swap! state* assoc-in [:pending id] task))))
-  nil)
+  ([id server] (connect-async! id server nil))
+  ([id server predecessor]
+   (locking finish-lock
+     (when-not (get-in @state* [:pending id])
+       (let [generation (:generation @state*)
+             task       (future
+                          (let [result (try (open-server server)
+                                            (catch Throwable e
+                                              {:error (or (.getMessage e) (str (class e)))}))]
+                            ;; Connect concurrently, but publish catalogs/logs in
+                            ;; server-id order. Never wait on a turn thread.
+                            (when predecessor @predecessor)
+                            (finish-connect! id server generation result)))]
+         (swap! state* assoc-in [:pending id] task)
+         task)))))
 
 (defn await-connects!
   "Block until every in-flight background connect has landed (bounded by
@@ -266,8 +270,10 @@
    (start! (:mcp (or (loader/snapshot "mcp start") {}))))
   ([servers]
    (stop!)
-   (doseq [[id server] (or servers {})]
-     (connect-async! (keyword id) (or server {})))
+   (reduce (fn [predecessor [id server]]
+             (connect-async! (keyword id) (or server {}) predecessor))
+           nil
+           (sort-by (comp name key) (or servers {})))
    nil))
 
 (deftype McpRuntime []
@@ -281,6 +287,7 @@
     (stop!)))
 
 (defn make
-  "Schema-factory for the :mcp table (one node for the whole map, not per server)."
-  [_path _slice]
+  "Config-component factory for the whole :mcp table. The component
+   reconciler invokes on-load at boot and on-config-change! on reload."
+  [_host]
   (McpRuntime.))
